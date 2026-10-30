@@ -1035,11 +1035,11 @@
                         <label style="color:#34d399;">Jenis Kegiatan Ujian</label>
                         <select id="cat_ujian" required onchange="renderUjian()" style="border-color:rgba(16, 185, 129, 0.5); background:rgba(16, 185, 129, 0.1); color:#34d399;">
                             <option value="" disabled selected>-- Pilih Kegiatan --</option>
-                            <option value="mengawas">👀 Mengawas Ujian (Rp 10.000 / sesi)</option>
-                            <option value="tulis_soal">✍️ Menulis Soal (Rp 20.000 / paket)</option>
-                            <option value="periksa">📝 Periksa Soal (Rp 5.000 / siswa)</option>
-                            <option value="praktik">🔬 Ujian Praktik (Rp 10.000 / siswa)</option>
-                            <option value="rapor">📄 Penulisan Rapor (Rp 30.000 / siswa)</option>
+                            <option value="mengawas">👀 Mengawas Ujian</option>
+                            <option value="tulis_soal">✍️ Menulis Soal</option>
+                            <option value="periksa">📝 Periksa Soal</option>
+                            <option value="praktik">🔬 Ujian Praktik</option>
+                            <option value="rapor">📄 Penulisan Rapor</option>
                         </select>
                     </div>
                     <div id="ujian-inputs"></div>
@@ -1659,21 +1659,14 @@
         function updateUjianDropdown() {
             const select = document.getElementById('cat_ujian');
             if (!select) return;
-            const tMap = (TARIF && TARIF.ujian) ? TARIF.ujian : {
-                mengawas: 10000,
-                tulis_soal: 20000,
-                periksa: 5000,
-                praktik: 10000,
-                rapor: 30000
-            };
             const currentVal = select.value;
             const options = [
                 { val: "", text: "-- Pilih Kegiatan --", disabled: true },
-                { val: "mengawas", text: `👀 Mengawas Ujian (${formatRupiah(tMap.mengawas || 10000)} / sesi)` },
-                { val: "tulis_soal", text: `✍️ Menulis Soal (${formatRupiah(tMap.tulis_soal || 20000)} / paket)` },
-                { val: "periksa", text: `📝 Periksa Soal (${formatRupiah(tMap.periksa || 5000)} / siswa)` },
-                { val: "praktik", text: `🔬 Ujian Praktik (${formatRupiah(tMap.praktik || 10000)} / siswa)` },
-                { val: "rapor", text: `📄 Penulisan Rapor (${formatRupiah(tMap.rapor || 30000)} / siswa)` }
+                { val: "mengawas", text: "👀 Mengawas Ujian" },
+                { val: "tulis_soal", text: "✍️ Menulis Soal" },
+                { val: "periksa", text: "📝 Periksa Soal" },
+                { val: "praktik", text: "🔬 Ujian Praktik" },
+                { val: "rapor", text: "📄 Penulisan Rapor" }
             ];
             select.innerHTML = '';
             options.forEach(opt => {

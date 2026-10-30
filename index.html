@@ -1499,8 +1499,26 @@
         }
 
         function checkAdminDialogue() {
-            const pass = document.getElementById('dialogue-admin-pass').value;
-            if(pass === getAdminPass()) {
+            const pass = document.getElementById('dialogue-admin-pass').value.trim();
+            if(!pass) return alert("Silakan masukkan Password Admin!");
+
+            const btn = document.querySelector('#dialogue-view-admin-login button.btn-primary');
+            const origText = btn ? btn.textContent : "Masuk Kepala Sekolah";
+            if(btn) { btn.textContent = "Memverifikasi..."; btn.disabled = true; }
+
+            // Verifikasi langsung dengan backend Apps Script
+            fetch(API_URL + "?action=read&admin_pass=" + encodeURIComponent(pass))
+            .then(r => r.json())
+            .then(d => {
+                if(btn) { btn.textContent = origText; btn.disabled = false; }
+                if(d.result === 'error' && d.message && d.message.includes('Password Admin salah')) {
+                    if(pass === getAdminPass()) {
+                        alert("⚠️ Password benar di aplikasi ('" + pass + "'), namun ditolak oleh Google Spreadsheet.\n\nPastikan di Google Sheets pada Sheet 'Master' sel I2 terisi '" + pass + "', atau perbarui file Code.gs di Apps Script.");
+                    } else {
+                        return alert("Password Admin Salah! Silakan coba lagi.");
+                    }
+                }
+
                 localStorage.setItem('sirekap_admin_pass', pass);
                 localStorage.setItem('sirekap_role', 'admin');
                 localStorage.setItem('sirekap_active_view', 'dashboard');
@@ -1516,9 +1534,29 @@
                 fetchData();
                 renderMaster('guru');
                 showNotif("Login Kepala Sekolah Berhasil! 👑");
-            } else {
-                alert("Password Admin Salah!");
-            }
+            })
+            .catch(() => {
+                if(btn) { btn.textContent = origText; btn.disabled = false; }
+                if(pass === getAdminPass()) {
+                    localStorage.setItem('sirekap_admin_pass', pass);
+                    localStorage.setItem('sirekap_role', 'admin');
+                    localStorage.setItem('sirekap_active_view', 'dashboard');
+                    localStorage.removeItem('sirekap_logged_in_guru');
+                    localStorage.removeItem('sirekap_logged_in_pin');
+                    document.getElementById('dialogue-portal').classList.add('hidden');
+                    document.getElementById('admin-nav').classList.remove('hidden');
+                    document.getElementById('bottom-nav-admin').classList.remove('hidden');
+                    document.getElementById('bottom-nav-guru').classList.add('hidden');
+                    document.getElementById('guru-nav').classList.add('hidden');
+                    switchView('dashboard');
+                    updateSpreadsheetButton();
+                    fetchData();
+                    renderMaster('guru');
+                    showNotif("Login Kepala Sekolah Berhasil! 👑");
+                } else {
+                    alert("Password Admin Salah atau Gagal terhubung ke server.");
+                }
+            });
         }
 
         function getAdminPass() { return localStorage.getItem('sirekap_admin_pass') || ADMIN_PASS; }
@@ -1963,35 +2001,56 @@
         }
 
         function fetchData() {
-            const adminQuery = "&admin_pass=" + encodeURIComponent(getAdminPass());
+            const adminPass = getAdminPass();
+            const adminQuery = "&admin_pass=" + encodeURIComponent(adminPass);
             
-            fetch(API_URL+"?action=read" + adminQuery).then(r=>r.json()).then(d=>{ 
-                const tb=document.querySelector('#dash-table-kbm tbody'); 
-                tb.innerHTML=''; 
-                if(d.data && d.data.length > 0) {
+            const tbKbm = document.querySelector('#dash-table-kbm tbody');
+            const tbUjian = document.querySelector('#dash-table-ujian tbody');
+            if (tbKbm) tbKbm.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 20px; color: #94a3b8;"><i class="fas fa-spinner fa-spin"></i> Memuat data KBM...</td></tr>';
+            if (tbUjian) tbUjian.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 20px; color: #94a3b8;"><i class="fas fa-spinner fa-spin"></i> Memuat data Ujian...</td></tr>';
+
+            fetch(API_URL + "?action=read" + adminQuery).then(r=>r.json()).then(d=>{ 
+                const tb = document.querySelector('#dash-table-kbm tbody'); 
+                if(!tb) return;
+                tb.innerHTML = ''; 
+                if(d.result === 'success' && d.data && d.data.length > 0) {
                     dashKBMData = d.data;
-                    d.data.slice(0,100).forEach(r=>{ 
-                        tb.innerHTML+=`<tr><td>${escapeHTML(r.Tanggal)}</td><td>${escapeHTML((r.Kode?r.Kode+' ':'')+r.Nama)}</td><td>${escapeHTML(r.Mapel||'-')}<br><small style="color:#94a3b8;">${escapeHTML(r.Kelas||'')}</small></td><td><span style="color:#34d399; font-weight:700;">${escapeHTML(r['Jam Sendiri']||r['Jam Team'])} JP</span></td></tr>`;
+                    d.data.slice(0, 100).forEach(r=>{ 
+                        const jam = (Number(r['Jam Sendiri']) || 0) + (Number(r['Jam Team']) || 0) || r['Jam Sendiri'] || r['Jam Team'] || 0;
+                        tb.innerHTML += `<tr><td>${escapeHTML(r.Tanggal)}</td><td>${escapeHTML((r.Kode ? r.Kode + ' ' : '') + r.Nama)}</td><td>${escapeHTML(r.Mapel || '-')}<br><small style="color:#94a3b8;">${escapeHTML(r.Kelas || '')}</small></td><td><span style="color:#34d399; font-weight:700;">${escapeHTML(jam)} JP</span></td></tr>`;
                     }); 
+                } else if(d.result === 'error') {
+                    dashKBMData = [];
+                    tb.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 20px; color: #f87171;"><i class="fas fa-lock" style="display:block; font-size:1.4rem; margin-bottom:6px;"></i><strong>${escapeHTML(d.message || "Akses Ditolak")}</strong><br><small style="color:#94a3b8;">Pastikan password di sel I2 sheet 'Master' terisi 'admin123' atau perbarui Code.gs</small></td></tr>`; 
                 } else {
                     dashKBMData = [];
-                    tb.innerHTML='<tr><td colspan="4" style="text-align:center; padding: 20px; color: #94a3b8;">Data Kosong / Akses Ditolak</td></tr>'; 
+                    tb.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 20px; color: #94a3b8;">Belum ada data KBM tersimpan</td></tr>'; 
                 }
-            }).catch(() => { document.querySelector('#dash-table-kbm tbody').innerHTML='<tr><td colspan="4" style="text-align:center; padding: 20px; color: #ef4444;">Gagal memuat data</td></tr>'; });
+            }).catch(() => { 
+                const tb = document.querySelector('#dash-table-kbm tbody');
+                if(tb) tb.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 20px; color: #ef4444;">Gagal memuat data dari server</td></tr>'; 
+            });
             
-            fetch(API_URL+"?action=read_ujian" + adminQuery).then(r=>r.json()).then(d=>{ 
-                const tb=document.querySelector('#dash-table-ujian tbody'); 
-                tb.innerHTML=''; 
-                if(d.data && d.data.length > 0) {
+            fetch(API_URL + "?action=read_ujian" + adminQuery).then(r=>r.json()).then(d=>{ 
+                const tb = document.querySelector('#dash-table-ujian tbody'); 
+                if(!tb) return;
+                tb.innerHTML = ''; 
+                if(d.result === 'success' && d.data && d.data.length > 0) {
                     dashUjianData = d.data;
-                    d.data.slice(0,100).forEach(r=>{ 
-                        tb.innerHTML+=`<tr><td>${escapeHTML(r.Tanggal)}</td><td>${escapeHTML((r.Kode?r.Kode+' ':'')+r.Nama)}</td><td>${escapeHTML(r.Kategori)}<br><small style="color:#94a3b8;">${escapeHTML(r.Rincian)}</small></td><td><span style="color:#38bdf8; font-weight:700;">${escapeHTML(r.Volume)}</span></td></tr>`;
+                    d.data.slice(0, 100).forEach(r=>{ 
+                        tb.innerHTML += `<tr><td>${escapeHTML(r.Tanggal)}</td><td>${escapeHTML((r.Kode ? r.Kode + ' ' : '') + r.Nama)}</td><td>${escapeHTML(r.Kategori || '-')}<br><small style="color:#94a3b8;">${escapeHTML(r.Rincian || '')}</small></td><td><span style="color:#38bdf8; font-weight:700;">${escapeHTML(r.Volume)}x</span></td></tr>`;
                     }); 
+                } else if(d.result === 'error') {
+                    dashUjianData = [];
+                    tb.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 20px; color: #f87171;"><i class="fas fa-lock" style="display:block; font-size:1.4rem; margin-bottom:6px;"></i><strong>${escapeHTML(d.message || "Akses Ditolak")}</strong><br><small style="color:#94a3b8;">Pastikan password di sel I2 sheet 'Master' terisi 'admin123' atau perbarui Code.gs</small></td></tr>`; 
                 } else {
                     dashUjianData = [];
-                    tb.innerHTML='<tr><td colspan="4" style="text-align:center; padding: 20px; color: #94a3b8;">Data Kosong / Akses Ditolak</td></tr>'; 
+                    tb.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 20px; color: #94a3b8;">Belum ada data Ujian tersimpan</td></tr>'; 
                 }
-            }).catch(() => { document.querySelector('#dash-table-ujian tbody').innerHTML='<tr><td colspan="4" style="text-align:center; padding: 20px; color: #ef4444;">Gagal memuat data</td></tr>'; });
+            }).catch(() => { 
+                const tb = document.querySelector('#dash-table-ujian tbody');
+                if(tb) tb.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 20px; color: #ef4444;">Gagal memuat data dari server</td></tr>'; 
+            });
         }
         
         function filterMasterDisplay() { const query = document.getElementById('search-master').value.toLowerCase(); document.querySelectorAll('.master-item').forEach(i => { const text = i.querySelector('span').textContent.toLowerCase(); i.style.display = text.includes(query) ? 'flex' : 'none'; }); }

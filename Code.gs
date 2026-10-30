@@ -90,7 +90,25 @@ function doGet(e) {
     // 6. Sinkronkan & Perbaiki Rumus Slip Gaji Otomatis
     if (action === "refresh_slip" || action === "sync_slip") {
       sinkronkanMasterGaji();
+      try {
+        const sMaster = getSheet(SHEET_MASTER);
+        const curPass = String(sMaster.getRange("I2").getValue() || "").trim();
+        if (!curPass) {
+          sMaster.getRange("I2").setValue(DEFAULT_ADMIN_PASS);
+        }
+      } catch (e) {}
       return responseJSON({ result: "success", message: "Rumus Slip Gaji Berhasil Diperbarui & Disinkronkan!" });
+    }
+
+    // 7. Reset / Set Password Admin Master ke Default (admin123)
+    if (action === "reset_admin_pass") {
+      try {
+        const sMaster = getSheet(SHEET_MASTER);
+        sMaster.getRange("I2").setValue(DEFAULT_ADMIN_PASS);
+        return responseJSON({ result: "success", message: "Password Admin di Sheet Master (I2) berhasil diset ke: " + DEFAULT_ADMIN_PASS });
+      } catch (err) {
+        return responseJSON({ result: "error", message: err.toString() });
+      }
     }
 
     return responseJSON({ result: "error", message: "Aksi GET tidak dikenali: " + action });
@@ -168,6 +186,77 @@ function syncPresensiFromRFID(p) {
     sPresensi = ss.insertSheet("Presensi");
   }
 
+  // 1. Cek apakah ada data baris sheet lengkap (format arsip harian: 10. Presensi Oktober)
+  let customRows = [];
+  try {
+    if (p.sheet_rows) {
+      customRows = JSON.parse(p.sheet_rows);
+    }
+  } catch(e) {}
+
+  if (Array.isArray(customRows) && customRows.length > 0) {
+    sPresensi.clear();
+    const maxCols = Math.max(...customRows.map(r => (Array.isArray(r) ? r.length : 0)), 8);
+    const normalizedRows = customRows.map(r => {
+      const rowCopy = Array.isArray(r) ? [...r] : [];
+      while (rowCopy.length < maxCols) rowCopy.push("");
+      return rowCopy;
+    });
+
+    sPresensi.getRange(1, 1, normalizedRows.length, maxCols).setValues(normalizedRows);
+
+    // Styling Otomatis Sheet Presensi Arsip:
+    // a. Judul Banner (Baris 1 - 3)
+    sPresensi.getRange("A1:H3").setFontWeight("bold").setHorizontalAlignment("left");
+    sPresensi.getRange("A1").setFontSize(13);
+    sPresensi.getRange("A2").setFontSize(11);
+    sPresensi.getRange("A3").setFontSize(11);
+
+    // b. Beri styling warna pada tabel guru
+    for (let r = 0; r < normalizedRows.length; r++) {
+      const c0 = String(normalizedRows[r][0] || "").trim();
+      const c1 = String(normalizedRows[r][1] || "").trim().toUpperCase();
+
+      // Baris Nama Guru di atas tabel
+      if (c0.length >= 4 && !/^(presensi|kabupaten|bulan|id|no\.|hari|maros|kepala)/i.test(c0) && isNaN(c0) && c0.indexOf("31") === -1 && c0.indexOf("2026") === -1) {
+        sPresensi.getRange(r + 1, 1, 1, maxCols).setFontWeight("bold").setFontSize(11).setBackground("#f1f5f9");
+      }
+
+      // Baris Header Tabel
+      if (c0 === "ID" || c0 === "NO." || c1 === "HARI") {
+        sPresensi.getRange(r + 1, 1, 1, maxCols).setBackground("#0284c7").setFontColor("#ffffff").setFontWeight("bold");
+      }
+
+      // Baris Keterangan Kehadiran
+      const statusText = String(normalizedRows[r][5] || "").trim().toUpperCase();
+      if (statusText === "TEPAT WAKTU") {
+        sPresensi.getRange(r + 1, 6).setFontColor("#059669").setFontWeight("bold");
+      } else if (statusText === "TERLAMBAT") {
+        sPresensi.getRange(r + 1, 6).setFontColor("#d97706").setFontWeight("bold");
+      } else if (statusText === "TIDAK HADIR") {
+        sPresensi.getRange(r + 1, 6).setFontColor("#94a3b8");
+      }
+
+      // Format Total Kehadiran
+      const totalCell = normalizedRows[r][6];
+      if (totalCell !== "" && totalCell !== null && !isNaN(totalCell)) {
+        sPresensi.getRange(r + 1, 7).setFontWeight("bold").setFontSize(11).setHorizontalAlignment("center");
+      }
+    }
+
+    sPresensi.autoResizeColumns(1, maxCols);
+
+    // Tarik langsung kehadiran ke Master_Gaji & perbarui seluruh rumus Slip Gaji
+    tarikKehadiranPresensi();
+
+    return {
+      result: "success",
+      count: normalizedRows.length,
+      message: "Berhasil menyinkronkan data presensi lengkap (format arsip harian) ke Sheet Presensi SiRekap!"
+    };
+  }
+
+  // 2. Fallback: format tabel ringkasan 6 kolom
   let guruList = [];
   try {
     guruList = JSON.parse(p.guru_data || "[]");
@@ -291,9 +380,23 @@ function formatWaktu(val) {
  * Validasi password admin
  */
 function validasiAdmin(pass) {
-  const sheet = getSheet(SHEET_MASTER);
-  const dbPass = sheet.getRange("I2").getValue() || DEFAULT_ADMIN_PASS;
-  return String(pass) === String(dbPass);
+  if (!pass) return false;
+  const cleanPass = String(pass).trim();
+
+  // 1. Master Key Fallback: DEFAULT_ADMIN_PASS ("admin123") selalu valid tanpa syarat
+  if (cleanPass === DEFAULT_ADMIN_PASS) return true;
+
+  // 2. Cek Password di Sheet Master Cell I2
+  try {
+    const sheet = getSheet(SHEET_MASTER);
+    const dbVal = sheet.getRange("I2").getValue();
+    if (dbVal !== "" && dbVal !== null && dbVal !== undefined) {
+      const dbPass = String(dbVal).trim();
+      if (dbPass && cleanPass === dbPass) return true;
+    }
+  } catch (e) {}
+
+  return false;
 }
 
 /**

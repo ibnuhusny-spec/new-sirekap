@@ -1249,18 +1249,43 @@
                 document.getElementById('status-koneksi').textContent = "🔴 API Link Kosong"; 
             }
 
-            // SEAMLESS AUTO-LOGIN UNTUK GURU
+            // SEAMLESS AUTO-LOGIN UNTUK GURU & ADMIN (KEPALA SEKOLAH)
+            const currentRole = localStorage.getItem('sirekap_role');
+            const adminPass = localStorage.getItem('sirekap_admin_pass');
             const loggedInGuru = localStorage.getItem('sirekap_logged_in_guru');
             const loggedInPin = localStorage.getItem('sirekap_logged_in_pin');
-            if(loggedInGuru && loggedInPin && API_URL !== "ISI_DENGAN_LINK_APPS_SCRIPT_ANDA_DISINI") {
+
+            if (currentRole === 'admin' && adminPass && API_URL !== "ISI_DENGAN_LINK_APPS_SCRIPT_ANDA_DISINI") {
+                // Sembunyikan Onboarding Portal
+                document.getElementById('dialogue-portal').classList.add('hidden');
+                document.getElementById('admin-nav').classList.remove('hidden');
+                document.getElementById('bottom-nav-admin').classList.remove('hidden');
+                document.getElementById('bottom-nav-guru').classList.add('hidden');
+                document.getElementById('guru-nav').classList.add('hidden');
+
+                const savedView = localStorage.getItem('sirekap_active_view') || 'dashboard';
+                const validViews = ['dashboard', 'master', 'server', 'pass'];
+                const targetView = validViews.includes(savedView) ? savedView : 'dashboard';
+                switchView(targetView, true);
+                updateSpreadsheetButton();
+                fetchData();
+                renderMaster(currentMasterType || 'guru');
+            } else if (loggedInGuru && loggedInPin && API_URL !== "ISI_DENGAN_LINK_APPS_SCRIPT_ANDA_DISINI") {
+                localStorage.setItem('sirekap_role', 'guru');
                 // Sembunyikan Onboarding Portal
                 document.getElementById('dialogue-portal').classList.add('hidden');
                 
                 // Tampilkan Form Guru & Bottom Bar Guru
-                switchView('form');
+                switchView('form', true);
+                
+                // Pulihkan Tab (KBM Harian atau Ujian Semester) sesuai pilihan terakhir
+                const savedTab = localStorage.getItem('sirekap_active_tab') || 'harian';
+                switchTab(savedTab, true);
+
                 document.getElementById('guru-nav').classList.remove('hidden');
                 document.getElementById('bottom-nav-guru').classList.remove('hidden');
                 document.getElementById('bottom-nav-admin').classList.add('hidden');
+                document.getElementById('admin-nav').classList.add('hidden');
                 document.getElementById('header-guru-name').textContent = loggedInGuru;
                 kunciFormGuru(loggedInGuru);
                 setTimeout(fetchMyHistory, 400);
@@ -1274,6 +1299,8 @@
                 document.getElementById('dialogue-portal').classList.remove('hidden');
                 document.getElementById('bottom-nav-guru').classList.add('hidden');
                 document.getElementById('bottom-nav-admin').classList.add('hidden');
+                document.getElementById('admin-nav').classList.add('hidden');
+                document.getElementById('guru-nav').classList.add('hidden');
             }
             
             document.querySelectorAll('.click-sound').forEach(b => b.addEventListener('click', playClick));
@@ -1388,15 +1415,20 @@
                     // SIMPAN SESI LOGIN (SEAMLESS AUTO-LOGIN BERIKUTNYA)
                     localStorage.setItem('sirekap_logged_in_guru', nama); 
                     localStorage.setItem('sirekap_logged_in_pin', pin);
+                    localStorage.setItem('sirekap_role', 'guru');
+                    localStorage.removeItem('sirekap_active_view');
 
                     btn.textContent = "Berhasil! Masuk... ✨";
 
                     setTimeout(() => {
                         document.getElementById('dialogue-portal').classList.add('hidden');
                         switchView('form');
+                        const savedTab = localStorage.getItem('sirekap_active_tab') || 'harian';
+                        switchTab(savedTab, true);
                         document.getElementById('guru-nav').classList.remove('hidden');
                         document.getElementById('bottom-nav-guru').classList.remove('hidden');
                         document.getElementById('bottom-nav-admin').classList.add('hidden');
+                        document.getElementById('admin-nav').classList.add('hidden');
                         document.getElementById('header-guru-name').textContent = nama;
                         kunciFormGuru(nama);
                         fetchMyHistory();
@@ -1417,10 +1449,15 @@
             const pass = document.getElementById('dialogue-admin-pass').value;
             if(pass === getAdminPass()) {
                 localStorage.setItem('sirekap_admin_pass', pass);
+                localStorage.setItem('sirekap_role', 'admin');
+                localStorage.setItem('sirekap_active_view', 'dashboard');
+                localStorage.removeItem('sirekap_logged_in_guru');
+                localStorage.removeItem('sirekap_logged_in_pin');
                 document.getElementById('dialogue-portal').classList.add('hidden');
                 document.getElementById('admin-nav').classList.remove('hidden');
                 document.getElementById('bottom-nav-admin').classList.remove('hidden');
                 document.getElementById('bottom-nav-guru').classList.add('hidden');
+                document.getElementById('guru-nav').classList.add('hidden');
                 switchView('dashboard');
                 updateSpreadsheetButton();
                 fetchData();
@@ -1447,11 +1484,18 @@
         }
 
         function logout() { 
-            if(!confirm("Yakin ingin keluar dari akun? Anda perlu memasukkan PIN kembali saat masuk berikutnya.")) return;
+            const isAdm = localStorage.getItem('sirekap_role') === 'admin';
+            const msg = isAdm 
+                ? "Yakin ingin keluar dari Dashboard Admin?" 
+                : "Yakin ingin keluar dari akun? Anda perlu memasukkan PIN kembali saat masuk berikutnya.";
+            if(!confirm(msg)) return;
 
             // HAPUS SESI LOGIN SAAT KELUAR
             localStorage.removeItem('sirekap_logged_in_guru'); 
             localStorage.removeItem('sirekap_logged_in_pin');
+            localStorage.removeItem('sirekap_role');
+            localStorage.removeItem('sirekap_active_view');
+            localStorage.removeItem('sirekap_active_tab');
 
             ['form','dashboard','master','server','pass'].forEach(i => {
                 const el = document.getElementById('view-' + i);
@@ -1523,8 +1567,9 @@
             }
         }
 
-        function switchTab(tab) { 
-            playClick();
+        function switchTab(tab, silent = false) { 
+            if (!silent) playClick();
+            localStorage.setItem('sirekap_active_tab', tab);
             document.querySelectorAll('.tab-btn').forEach(b => {
                 const isMatch = (tab === 'harian' && b.textContent.includes('Harian')) || 
                                 (tab === 'ujian' && b.textContent.includes('Ujian'));
@@ -1547,7 +1592,7 @@
                 document.getElementById('form-harian').classList.add('hidden'); 
                 document.getElementById('form-ujian').classList.remove('hidden'); 
             } 
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            if (!silent) window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         function scrollToHistory() {
@@ -1908,8 +1953,11 @@
         const audioCtx = new (window.AudioContext||window.webkitAudioContext)();
         function playClick(){ if(audioCtx.state==='suspended')audioCtx.resume(); const o=audioCtx.createOscillator();const g=audioCtx.createGain();o.connect(g);g.connect(audioCtx.destination);o.start();g.gain.exponentialRampToValueAtTime(0.00001,audioCtx.currentTime+0.08);o.stop(audioCtx.currentTime+0.08); }
         
-        function switchView(v) { 
-            playClick();
+        function switchView(v, silent = false) { 
+            if (!silent) playClick();
+            if (['dashboard','master','server','pass'].includes(v)) {
+                localStorage.setItem('sirekap_active_view', v);
+            }
             ['form','dashboard','master','server','pass'].forEach(i => {
                 const el = document.getElementById('view-' + i);
                 if (el) el.classList.add('hidden');
@@ -1938,7 +1986,7 @@
                 document.getElementById('oldPass').value = '';
                 document.getElementById('newPass').value = '';
             }
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            if (!silent) window.scrollTo({ top: 0, behavior: 'smooth' });
         }
         
         function fetchMyHistory() {
@@ -1991,7 +2039,7 @@
                 const desc = isHarian ? `${escapeHTML(item.Mapel)} (${escapeHTML(item.Kelas)})` : `${escapeHTML(item.Kategori)} ${item.Rincian ? '- ' + escapeHTML(item.Rincian) : ''}`;
                 const val = isHarian 
                     ? `${escapeHTML(item['Jam Sendiri'] || item['Jam Team'])} JP` 
-                    : `Vol: ${escapeHTML(item.Volume)} ${item.Nominal > 0 ? '• ' + formatRupiah(item.Nominal) : ''}`;
+                    : `Vol: ${escapeHTML(item.Volume)}`;
                 const badgeColor = isHarian ? 'rgba(6, 182, 212, 0.2)' : 'rgba(16, 185, 129, 0.2)';
                 const badgeTextColor = isHarian ? '#22d3ee' : '#34d399';
                 const div = document.createElement('div'); div.className = 'history-item';

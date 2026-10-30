@@ -130,11 +130,13 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 10px;
         }
         .brand-wrapper {
             display: flex;
             align-items: center;
             gap: 10px;
+            flex-shrink: 0;
         }
         .brand-logo {
             width: 38px;
@@ -163,6 +165,20 @@
             text-transform: uppercase;
         }
 
+        .header-nav-wrapper {
+            display: flex;
+            align-items: center;
+            min-width: 0;
+            flex-shrink: 1;
+            justify-content: flex-end;
+        }
+        .nav-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+            max-width: 100%;
+        }
         .user-pill {
             display: flex;
             align-items: center;
@@ -171,14 +187,20 @@
             border: 1px solid rgba(16, 185, 129, 0.3);
             padding: 5px 12px;
             border-radius: 50px;
+            min-width: 0;
+            flex-shrink: 1;
+            transition: all 0.2s ease;
         }
         .user-avatar-icon {
             font-size: 1.1rem;
+            flex-shrink: 0;
         }
         .user-info-text {
             display: flex;
             flex-direction: column;
             text-align: left;
+            min-width: 0;
+            overflow: hidden;
         }
         .user-role-label {
             font-size: 0.6rem;
@@ -186,15 +208,16 @@
             font-weight: 800;
             color: #34d399;
             letter-spacing: 0.5px;
+            line-height: 1;
         }
         .user-name-label {
-            font-size: 0.8rem;
+            font-size: 0.82rem;
             font-weight: 700;
             color: #ffffff;
-            max-width: 150px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            min-width: 0;
         }
 
         .nav-btn {
@@ -719,18 +742,22 @@
         /* RESPONSIVE KHUSUS LAYAR HP (MOBILE OPTIMIZATION) */
         @media (max-width: 600px) {
             body { padding-bottom: calc(90px + env(safe-area-inset-bottom, 0px)); }
-            header { padding: 0.65rem 0.8rem; }
-            .brand-wrapper { gap: 8px; }
-            .brand-logo { width: 32px; height: 32px; font-size: 1rem; border-radius: 10px; }
-            .brand-title { font-size: 1.1rem; }
+            header { padding: 0.6rem 0.75rem; }
+            .header-content { gap: 6px; }
+            .brand-wrapper { gap: 6px; flex-shrink: 0; }
+            .brand-logo { width: 30px; height: 30px; font-size: 0.95rem; border-radius: 8px; }
+            .brand-title { font-size: 1rem; letter-spacing: 0.3px; }
             .brand-sub { display: none; }
             
-            /* Header User Pill & Logout agar pas dan tidak terpotong */
-            .user-pill { padding: 4px 8px; gap: 5px; max-width: 140px; }
-            .user-avatar-icon { font-size: 0.95rem; }
+            /* Header User Pill & Logout fleksibel, rapi & nama tampil lengkap */
+            .header-nav-wrapper { min-width: 0; flex: 1; justify-content: flex-end; }
+            .nav-container { gap: 5px; min-width: 0; max-width: 100%; justify-content: flex-end; }
+            .user-pill { padding: 5px 9px; gap: 6px; min-width: 0; max-width: 100%; border-radius: 30px; }
+            .user-avatar-icon { font-size: 0.95rem; flex-shrink: 0; }
+            .user-info-text { min-width: 0; overflow: hidden; }
             .user-role-label { display: none; }
-            .user-name-label { max-width: 85px; font-size: 0.75rem; }
-            .nav-btn.logout { padding: 6px 10px; font-size: 0.75rem; white-space: nowrap; flex-shrink: 0; }
+            .user-name-label { font-size: 0.78rem; font-weight: 700; min-width: 0; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+            .nav-btn.logout { padding: 5px 8px; font-size: 0.75rem; border-radius: 10px; white-space: nowrap; flex-shrink: 0; gap: 3px; }
             
             .container { padding: 0 0.75rem; margin: 1rem auto; }
             .card { padding: 1.25rem 1rem; border-radius: 20px; }
@@ -870,16 +897,16 @@
                     <p id="status-koneksi" class="brand-sub">🟢 Online</p>
                 </div>
             </div>
-            <div>
+            <div class="header-nav-wrapper">
                 <!-- Admin Nav (Compact) -->
-                <div id="admin-nav" class="hidden" style="display:flex; align-items:center; gap:8px;">
-                    <span class="user-pill" style="border-color:rgba(56,189,248,0.4); background:rgba(56,189,248,0.12); color:#38bdf8; font-size:0.75rem; font-weight:800; padding:4px 8px;">👑 Admin</span>
+                <div id="admin-nav" class="hidden nav-container">
+                    <span class="user-pill" style="border-color:rgba(56,189,248,0.4); background:rgba(56,189,248,0.12); color:#38bdf8; font-size:0.75rem; font-weight:800; padding:5px 9px;">👑 Admin</span>
                     <button class="nav-btn logout click-sound" onclick="logout()" title="Keluar">🚪 Keluar</button>
                 </div>
                 <!-- Guru Nav with Compact User Pill -->
-                <div id="guru-nav" class="hidden" style="display:flex; align-items:center; gap:6px;">
-                    <div class="user-pill" title="Guru Aktif">
-                        <span class="user-avatar-icon">👨‍🏫</span>
+                <div id="guru-nav" class="hidden nav-container">
+                    <div class="user-pill" id="header-user-pill" title="Guru Aktif">
+                        <span class="user-avatar-icon">🧑‍🏫</span>
                         <div class="user-info-text">
                             <span class="user-role-label">Guru</span>
                             <span id="header-guru-name" class="user-name-label">Memuat...</span>
@@ -1286,7 +1313,10 @@
                 document.getElementById('bottom-nav-guru').classList.remove('hidden');
                 document.getElementById('bottom-nav-admin').classList.add('hidden');
                 document.getElementById('admin-nav').classList.add('hidden');
-                document.getElementById('header-guru-name').textContent = loggedInGuru;
+                const elGuruName = document.getElementById('header-guru-name');
+                if (elGuruName) { elGuruName.textContent = loggedInGuru; elGuruName.title = loggedInGuru; }
+                const elPill = document.getElementById('header-user-pill');
+                if (elPill) elPill.title = "Guru Aktif: " + loggedInGuru;
                 kunciFormGuru(loggedInGuru);
                 setTimeout(fetchMyHistory, 400);
 
@@ -1429,7 +1459,10 @@
                         document.getElementById('bottom-nav-guru').classList.remove('hidden');
                         document.getElementById('bottom-nav-admin').classList.add('hidden');
                         document.getElementById('admin-nav').classList.add('hidden');
-                        document.getElementById('header-guru-name').textContent = nama;
+                        const elNamaLogin = document.getElementById('header-guru-name');
+                        if (elNamaLogin) { elNamaLogin.textContent = nama; elNamaLogin.title = nama; }
+                        const elPillLogin = document.getElementById('header-user-pill');
+                        if (elPillLogin) elPillLogin.title = "Guru Aktif: " + nama;
                         kunciFormGuru(nama);
                         fetchMyHistory();
                         showNotif(`Selamat Datang, ${nama}! 🎉`);

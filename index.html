@@ -738,6 +738,21 @@
             opacity: 1;
             transform: scale(1);
         }
+        .bottom-nav-item.bnav-logout {
+            color: #f87171;
+            transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .bottom-nav-item.bnav-logout:hover,
+        .bottom-nav-item.bnav-logout:active {
+            color: #fca5a5;
+            background: rgba(239, 68, 68, 0.18);
+        }
+        .bottom-nav-item.bnav-logout .bnav-icon {
+            filter: drop-shadow(0 2px 6px rgba(239, 68, 68, 0.35));
+        }
+        .bottom-nav-item.bnav-logout:active .bnav-icon {
+            transform: scale(0.9);
+        }
 
         /* RESPONSIVE KHUSUS LAYAR HP (MOBILE OPTIMIZATION) */
         @media (max-width: 600px) {
@@ -749,15 +764,14 @@
             .brand-title { font-size: 1rem; letter-spacing: 0.3px; }
             .brand-sub { display: none; }
             
-            /* Header User Pill & Logout fleksibel, rapi & nama tampil lengkap */
+            /* Header User Pill fleksibel & nama guru benar-benar lowong */
             .header-nav-wrapper { min-width: 0; flex: 1; justify-content: flex-end; }
-            .nav-container { gap: 5px; min-width: 0; max-width: 100%; justify-content: flex-end; }
-            .user-pill { padding: 5px 9px; gap: 6px; min-width: 0; max-width: 100%; border-radius: 30px; }
-            .user-avatar-icon { font-size: 0.95rem; flex-shrink: 0; }
+            .nav-container { min-width: 0; max-width: 100%; justify-content: flex-end; }
+            .user-pill { padding: 6px 12px; gap: 7px; min-width: 0; max-width: 100%; border-radius: 30px; }
+            .user-avatar-icon { font-size: 1rem; flex-shrink: 0; }
             .user-info-text { min-width: 0; overflow: hidden; }
             .user-role-label { display: none; }
-            .user-name-label { font-size: 0.78rem; font-weight: 700; min-width: 0; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-            .nav-btn.logout { padding: 5px 8px; font-size: 0.75rem; border-radius: 10px; white-space: nowrap; flex-shrink: 0; gap: 3px; }
+            .user-name-label { font-size: 0.82rem; font-weight: 700; min-width: 0; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
             
             .container { padding: 0 0.75rem; margin: 1rem auto; }
             .card { padding: 1.25rem 1rem; border-radius: 20px; }
@@ -900,10 +914,9 @@
             <div class="header-nav-wrapper">
                 <!-- Admin Nav (Compact) -->
                 <div id="admin-nav" class="hidden nav-container">
-                    <span class="user-pill" style="border-color:rgba(56,189,248,0.4); background:rgba(56,189,248,0.12); color:#38bdf8; font-size:0.75rem; font-weight:800; padding:5px 9px;">👑 Admin</span>
-                    <button class="nav-btn logout click-sound" onclick="logout()" title="Keluar">🚪 Keluar</button>
+                    <span class="user-pill" style="border-color:rgba(56,189,248,0.4); background:rgba(56,189,248,0.12); color:#38bdf8; font-size:0.8rem; font-weight:800; padding:6px 14px;">👑 Kepala Sekolah / Admin</span>
                 </div>
-                <!-- Guru Nav with Compact User Pill -->
+                <!-- Guru Nav with Spacious User Pill -->
                 <div id="guru-nav" class="hidden nav-container">
                     <div class="user-pill" id="header-user-pill" title="Guru Aktif">
                         <span class="user-avatar-icon">🧑‍🏫</span>
@@ -912,7 +925,6 @@
                             <span id="header-guru-name" class="user-name-label">Memuat...</span>
                         </div>
                     </div>
-                    <button class="nav-btn logout click-sound" onclick="logout()" title="Keluar atau ganti akun">🚪 Keluar</button>
                 </div>
             </div>
         </div>
@@ -931,6 +943,10 @@
         <button class="bottom-nav-item click-sound" id="bnav-riwayat" onclick="scrollToHistory()" title="Riwayat Input Saya">
             <span class="bnav-icon">📜</span>
             <span class="bnav-dot"></span>
+        </button>
+        <button class="bottom-nav-item bnav-logout click-sound" id="bnav-logout-guru" onclick="logout()" title="Keluar / Ganti Akun">
+            <span class="bnav-icon">🚪</span>
+            <span class="bnav-dot" style="background:#ef4444; box-shadow:0 0 8px #ef4444;"></span>
         </button>
     </nav>
 
@@ -951,6 +967,10 @@
         <button class="bottom-nav-item click-sound" id="bnav-pass" onclick="switchView('pass')" title="Ganti Password Admin">
             <span class="bnav-icon">🔒</span>
             <span class="bnav-dot"></span>
+        </button>
+        <button class="bottom-nav-item bnav-logout click-sound" id="bnav-logout-admin" onclick="logout()" title="Keluar dari Admin">
+            <span class="bnav-icon">🚪</span>
+            <span class="bnav-dot" style="background:#ef4444; box-shadow:0 0 8px #ef4444;"></span>
         </button>
     </nav>
 
